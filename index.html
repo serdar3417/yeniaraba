@@ -498,33 +498,40 @@
             }, 3000);
         }
 
-        // Merkezi araba kontrol fonksiyonu
+        // Merkezi araba kontrol fonksiyonu - Geliştirilmiş
         function controlCarWithSensorData(gamma, beta) {
             // Sağ-Sol hareket (Gamma) - Çok hassas
-            if (Math.abs(gamma) > 1) {
-                const moveAmount = gamma * 0.6;
+            if (Math.abs(gamma) > 2) { // Minimum eşik artırıldı
+                const moveAmount = gamma * 0.4; // Hassasiyet azaltıldı
                 carPosition += moveAmount;
-                carPosition = Math.max(5, Math.min(95, carPosition));
+                carPosition = Math.max(15, Math.min(85, carPosition)); // Sınırlar düzenlendi
                 updateCarPosition();
+                console.log('Sensör hareket - Gamma:', gamma.toFixed(1), 'Pozisyon:', carPosition.toFixed(1));
             }
 
             // Hız kontrolü (Beta)
             const normalBeta = 45; // Normal telefon tutma açısı
             const betaDiff = beta - normalBeta;
             
-            if (betaDiff < -15) { // Telefon öne eğilmiş
-                speed = Math.min(120, speed + 1.2);
-                gameSpeed = speed / 50;
-                updateSpeed();
-            } else if (betaDiff > 15) { // Telefon arkaya eğilmiş
-                speed = Math.max(20, speed - 1.2);
-                gameSpeed = speed / 50;
-                updateSpeed();
+            if (Math.abs(betaDiff) > 20) { // Minimum eşik artırıldı
+                if (betaDiff < -20) { // Telefon öne eğilmiş
+                    speed = Math.min(120, speed + 0.8);
+                    gameSpeed = speed / 50;
+                    updateSpeed();
+                    console.log('Hızlanma - Beta:', beta.toFixed(1), 'Hız:', speed.toFixed(1));
+                } else if (betaDiff > 20) { // Telefon arkaya eğilmiş
+                    speed = Math.max(20, speed - 0.8);
+                    gameSpeed = speed / 50;
+                    updateSpeed();
+                    console.log('Yavaşlama - Beta:', beta.toFixed(1), 'Hız:', speed.toFixed(1));
+                }
             }
         }
 
         function updateCarPosition() {
             car.style.left = carPosition + '%';
+            car.style.transform = `translateX(-50%)`; // Merkez hizalama
+            console.log('Araba pozisyonu güncellendi:', carPosition + '%');
         }
 
         function updateSpeed() {
@@ -535,17 +542,26 @@
             score = 0;
             level = 1;
             speed = 50;
-            carPosition = 50;
+            carPosition = 50; // Ortada başlat
             gameSpeed = 1;
             obstacles = [];
             roadLines = [];
+            
+            // Arabayı merkeze yerleştir
+            updateCarPosition();
             updateUI();
             createRoadLines();
+            
+            console.log('Oyun başlatıldı - Araba pozisyonu:', carPosition);
         }
 
         function createRoadLines() {
-            setInterval(() => {
-                if (!gameRunning) return;
+            const lineInterval = setInterval(() => {
+                if (!gameRunning) {
+                    clearInterval(lineInterval);
+                    return;
+                }
+                
                 const line = document.createElement('div');
                 line.className = 'road-line';
                 line.style.top = '-40px';
@@ -553,6 +569,7 @@
 
                 let position = -40;
                 const animate = () => {
+                    if (!gameRunning) return;
                     position += gameSpeed * 4;
                     line.style.top = position + 'px';
                     
@@ -563,26 +580,37 @@
                     }
                 };
                 animate();
-            }, 250);
+            }, 300);
         }
 
         function createObstacle() {
+            console.log('Yeni engel yaratılıyor...');
             const obstacle = document.createElement('div');
             obstacle.className = 'obstacle';
             
-            const lanes = [20, 50, 80];
-            obstacle.style.left = lanes[Math.floor(Math.random() * lanes.length)] + '%';
+            // Üç şerit: sol, orta, sağ
+            const lanes = [25, 50, 75];
+            const selectedLane = lanes[Math.floor(Math.random() * lanes.length)];
+            obstacle.style.left = selectedLane + '%';
             obstacle.style.top = '-80px';
+            obstacle.style.transform = 'translateX(-50%)'; // Merkez hizalama
+            
             gameContainer.appendChild(obstacle);
             obstacles.push(obstacle);
+            
+            console.log('Engel yaratıldı - Şerit:', selectedLane + '%');
 
             let position = -80;
             const animate = () => {
+                if (!gameRunning) return;
                 position += gameSpeed * 3;
                 obstacle.style.top = position + 'px';
                 
                 if (position > window.innerHeight) {
-                    if (obstacle.parentNode) obstacle.parentNode.removeChild(obstacle);
+                    if (obstacle.parentNode) {
+                        obstacle.parentNode.removeChild(obstacle);
+                        console.log('Engel silindi');
+                    }
                     obstacles = obstacles.filter(obs => obs !== obstacle);
                 } else {
                     requestAnimationFrame(animate);
@@ -646,8 +674,11 @@
             checkCollision();
             updateScore();
 
-            if (Math.random() < 0.012 * level) {
+            // Engel yaratma - Daha sık ve garantili
+            const obstacleChance = 0.02 + (level * 0.005); // Seviye arttıkça daha sık
+            if (Math.random() < obstacleChance) {
                 createObstacle();
+                console.log('Engel yaratma şansı:', obstacleChance);
             }
 
             requestAnimationFrame(gameLoop);
