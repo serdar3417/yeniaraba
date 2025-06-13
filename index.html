@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Araba Yarışı</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to bottom, #87CEEB, #90EE90);
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: 
+                linear-gradient(to right, #228B22 0%, #228B22 18%, #404040 18%, #404040 82%, #228B22 82%, #228B22 100%);
+            overflow: hidden;
+        }
+
+        .road-line {
+            position: absolute;
+            width: 4px;
+            height: 40px;
+            background: white;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        #car {
+            position: absolute;
+            width: 40px;
+            height: 70px;
+            background: linear-gradient(45deg, #FF6B6B, #FF8E53);
+            border-radius: 10px 10px 5px 5px;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            transition: left 0.1s ease;
+            box-shadow: 0 0 15px rgba(255, 107, 107, 0.7);
+            border: 2px solid #fff;
+            z-index: 10;
+        }
+
+        #car::before {
+            content: '';
+            position: absolute;
+            width: 30px;
+            height: 20px;
+            background: #87CEEB;
+            top: 10px;
+            left: 5px;
+            border-radius: 3px;
+        }
+
+        .car-protected {
+            box-shadow: 0 0 25px rgba(255, 255, 0, 0.8) !important;
+            animation: yellowGlow 0.5s infinite alternate;
+        }
+
+        .car-super-protected {
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.8) !important;
+            animation: greenGlow 0.5s infinite alternate;
+        }
+
+        @keyframes yellowGlow {
+            0% { box-shadow: 0 0 25px rgba(255, 255, 0, 0.8); }
+            100% { box-shadow: 0 0 35px rgba(255, 255, 0, 1); }
+        }
+
+        @keyframes greenGlow {
+            0% { box-shadow: 0 0 30px rgba(0, 255, 0, 0.8); }
+            100% { box-shadow: 0 0 40px rgba(0, 255, 0, 1); }
+        }
+
+        .obstacle {
+            position: absolute;
+            width: 45px;
+            height: 60px;
+            background: linear-gradient(45deg, #8B0000, #DC143C);
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(139, 0, 0, 0.8);
+            border: 2px solid #fff;
+        }
+
+        .obstacle::before {
+            content: '';
+            position: absolute;
+            width: 35px;
+            height: 15px;
+            background: #333;
+            top: 8px;
+            left: 5px;
+            border-radius: 2px;
+        }
+
+        .reward {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 3px solid #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: bold;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+            animation: sparkle 1s infinite;
+        }
+
+        .reward.yellow {
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            color: #fff;
+        }
+
+        .reward.green {
+            background: linear-gradient(45deg, #32CD32, #00FF00);
+            color: #fff;
+        }
+
+        @keyframes sparkle {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.1) rotate(180deg); }
+        }
+
+        #ui {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            color: white;
+            font-weight: bold;
+            z-index: 100;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        #gameInfo {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            color: white;
+            font-weight: bold;
+            z-index: 100;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: right;
+        }
+
+        #countdown {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+            z-index: 150;
+            display: none;
+        }
+
+        #lives {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+        }
+
+        .life {
+            width: 20px;
+            height: 20px;
+            background: #FF4444;
+            border-radius: 50%;
+            border: 2px solid #fff;
+        }
+
+        .life.lost {
+            background: #666;
+        }
+
+        #protection {
+            margin-top: 5px;
+            font-size: 12px;
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+            z-index: 200;
+            border: 3px solid #FF6B6B;
+        }
+
+        #startScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 300;
+            text-align: center;
+        }
+
+        .btn-custom {
+            background: linear-gradient(45deg, #FF6B6B, #FF8E53);
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 25px;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .btn-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.6);
+        }
+
+        .btn-level {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 10px;
+        }
+
+        .instruction {
+            margin: 10px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            max-width: 400px;
+        }
+
+        #levelSelect {
+            display: none;
+        }
+
+        #sensorDebug {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: white;
+            font-size: 12px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            border-radius: 5px;
+            max-width: 250px;
+            border: 2px solid #4CAF50;
+        }
+
+        .sensor-active {
+            border-color: #4CAF50 !important;
+            background: rgba(76, 175, 80, 0.2) !important;
+        }
+
+        .sensor-inactive {
+            border-color: #f44336 !important;
+            background: rgba(244, 67, 54, 0.2) !important;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .particle.yellow {
+            background: #FFD700;
+            box-shadow: 0 0 6px #FFD700;
+        }
+
+        .particle.green {
+            background: #00FF00;
+            box-shadow: 0 0 6px #00FF00;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="startScreen">
+            <h1 class="mb-4">🏎️ Pro Araba Yarışı</h1>
+            <div class="instruction">
+                <h5>🎮 Seviye Seç!</h5>
+                <p><strong>🟢 ACEMİ:</strong> Yavaş, az engel (60sn)</p>
+                <p><strong>🟡 ORTA:</strong> Normal hız, orta engel (45sn)</p>
+                <p><strong>🔴 UZMAN:</strong> Hızlı, çok engel (30sn)</p>
+                
+                <div class="mt-3" style="background: rgba(0,255,255,0.2); padding: 10px; border-radius: 5px;">
+                    <small><strong>✨ Özellikler:</strong><br>
+                    • 3 can hakkı<br>
+                    • Sarı ödül: 3sn koruma<br>
+                    • Yeşil ödül: 5sn süper koruma<br>
+                    • Zamana karşı yarış!</small>
+                </div>
+            </div>
+            
+            <div id="levelSelect">
+                <button class="btn btn-custom btn-level" onclick="selectLevel('beginner')">🟢 ACEMİ</button>
+                <button class="btn btn-custom btn-level" onclick="selectLevel('medium')">🟡 ORTA</button>
+                <button class="btn btn-custom btn-level" onclick="selectLevel('expert')">🔴 UZMAN</button>
+            </div>
+
+            <button class="btn btn-custom mt-4" onclick="showLevelSelect()">Seviye Seç ve Başla</button>
+            <div id="permissionStatus" class="mt-3"></div>
+        </div>
+
+        <div id="countdown">3</div>
+
+        <div id="ui">
+            <div>Skor: <span id="score">0</span></div>
+            <div>Seviye: <span id="currentLevel">ACEMİ</span></div>
+            <div id="lives">
+                <div class="life"></div>
+                <div class="life"></div>
+                <div class="life"></div>
+            </div>
+            <div id="protection"></div>
+        </div>
+
+        <div id="gameInfo">
+            <div>Hız: <span id="speedometer">10</span> km/h</div>
+            <div>Süre: <span id="timeLeft">60</span>s</div>
+            <div>Mesafe: <span id="distance">0</span>m</div>
+        </div>
+
+        <div id="sensorDebug">
+            <div><strong>🔍 Sensör:</strong> <span id="sensorStatus">Bekleniyor...</span></div>
+            <div>Kalibrasyon: <span id="calibrationStatus">Beklemde</span></div>
+            <div>Düzeltilmiş: <span id="correctedGamma">0</span>°</div>
+        </div>
+
+        <div id="car"></div>
+
+        <div id="gameOver">
+            <h2 id="gameOverTitle">🏁 Oyun Bitti!</h2>
+            <p id="gameOverReason">Süre doldu!</p>
+            <p>Final Skorun: <span id="finalScore">0</span></p>
+            <p>Mesafe: <span id="finalDistance">0</span>m</p>
+            <p>Seviye: <span id="finalLevel">ACEMİ</span></p>
+            <button class="btn btn-custom mt-3" onclick="restartGame()">Tekrar Oyna</button>
+            <button class="btn btn-custom mt-3" onclick="backToMenu()">Ana Menü</button>
+        </div>
+    </div>
+
+    <script>
+        let gameRunning = false;
+        let score = 0;
+        let distance = 0;
+        let lives = 3;
+        let carPosition = 50;
+        let obstacles = [];
+        let rewards = [];
+        let gameSpeed = 1;
+        let roadLines = [];
+        let sensorWorking = false;
+        let baseGamma = 0;
+        let calibrationDone = false;
+        let targetCarPosition = 50;
+        let currentCarPosition = 50;
+        let targetSpeed = 10;
+        let currentSpeed = 10;
+        let lastObstacleTime = 0;
+        let lastRewardTime = 0;
+        let protectionTime = 0;
+        let protectionType = '';
+        let timeLeft = 60;
+        let gameTimer = null;
+        let currentGameLevel = 'beginner';
+
+        // Seviye ayarları
+        const levelSettings = {
+            beginner: {
+                name: 'ACEMİ',
+                icon: '🟢',
+                time: 60,
+                obstacleInterval: 2000,
+                obstacleChance: 0.015,
+                rewardChance: 0.008,
+                maxSpeed: 60,
+                speedMultiplier: 0.8
+            },
+            medium: {
+                name: 'ORTA', 
+                icon: '🟡',
+                time: 45,
+                obstacleInterval: 1500,
+                obstacleChance: 0.025,
+                rewardChance: 0.006,
+                maxSpeed: 80,
+                speedMultiplier: 1.0
+            },
+            expert: {
+                name: 'UZMAN',
+                icon: '🔴', 
+                time: 30,
+                obstacleInterval: 1000,
+                obstacleChance: 0.035,
+                rewardChance: 0.004,
+                maxSpeed: 100,
+                speedMultiplier: 1.2
+            }
+        };
+
+        const car = document.getElementById('car');
+        const gameContainer = document.getElementById('gameContainer');
+        const scoreElement = document.getElementById('score');
+        const speedElement = document.getElementById('speedometer');
+        const timeElement = document.getElementById('timeLeft');
+        const distanceElement = document.getElementById('distance');
+        const gameOverScreen = document.getElementById('gameOver');
+        const startScreen = document.getElementById('startScreen');
+        const countdownElement = document.getElementById('countdown');
+
+        function showLevelSelect() {
+            document.getElementById('levelSelect').style.display = 'block';
+            document.querySelector('.instruction').style.display = 'none';
+            document.querySelector('button[onclick="showLevelSelect()"]').style.display = 'none';
+        }
+
+        async function selectLevel(level) {
+            currentGameLevel = level;
+            const settings = levelSettings[level];
+            
+            document.getElementById('currentLevel').textContent = settings.name;
+            timeLeft = settings.time;
+            document.getElementById('timeLeft').textContent = timeLeft;
+            
+            const statusElement = document.getElementById('permissionStatus');
+            statusElement.innerHTML = `${settings.icon} ${settings.name} seviyesi seçildi! Sensörler başlatılıyor...`;
+            statusElement.className = 'mt-3 text-info';
+
+            try {
+                await startSensorGame();
+            } catch (error) {
+                console.error('Seviye başlatma hatası:', error);
+                statusElement.innerHTML = '❌ Hata: ' + error.message;
+                statusElement.className = 'mt-3 text-danger';
+            }
+        }
+
+        async function startSensorGame() {
+            const statusElement = document.getElementById('permissionStatus');
+
+            // HTTPS kontrolü
+            if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+                statusElement.innerHTML = '❌ HTTPS gerekli!';
+                statusElement.className = 'mt-3 text-danger';
+                return;
+            }
+
+            try {
+                // iOS izin iste
+                if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    const response = await DeviceOrientationEvent.requestPermission();
+                    if (response !== 'granted') {
+                        throw new Error('iOS izni reddedildi');
+                    }
+                }
+
+                statusElement.innerHTML = '🎮 Sensörler etkinleştiriliyor...';
+                setupAllSensors();
+                
+                setTimeout(() => {
+                    startCalibration();
+                    setTimeout(() => {
+                        startCountdown();
+                    }, 5500);
+                }, 1000);
+
+            } catch (error) {
+                statusElement.innerHTML = '❌ Hata: ' + error.message;
+                statusElement.className = 'mt-3 text-danger';
+                console.error('Sensör hatası:', error);
+            }
+        }
+
+        function setupAllSensors() {
+            window.addEventListener('deviceorientation', handleOrientation, true);
+            window.addEventListener('devicemotion', handleMotion, true);
+        }
+
+        function startCalibration() {
+            console.log('=== KALİBRASYON BAŞLIYOR ===');
+            document.getElementById('calibrationStatus').textContent = 'Kalibrasyon...';
+            
+            let calibrationValues = [];
+            let calibrationCount = 0;
+            
+            const calibrationInterval = setInterval(() => {
+                calibrationCount++;
+                
+                if (calibrationCount >= 50) {
+                    if (calibrationValues.length > 0) {
+                        calibrationValues.sort((a, b) => a - b);
+                        const middle = Math.floor(calibrationValues.length / 2);
+                        baseGamma = calibrationValues.length % 2 === 0 
+                            ? (calibrationValues[middle - 1] + calibrationValues[middle]) / 2
+                            : calibrationValues[middle];
+                        
+                        calibrationDone = true;
+                        document.getElementById('calibrationStatus').textContent = `Tamamlandı (${baseGamma.toFixed(1)}°)`;
+                        console.log('Kalibrasyon tamamlandı - Base Gamma:', baseGamma);
+                    } else {
+                        baseGamma = 0;
+                        calibrationDone = true;
+                        document.getElementById('calibrationStatus').textContent = 'Manuel mod';
+                    }
+                    clearInterval(calibrationInterval);
+                }
+            }, 100);
+            
+            window.addEventListener('deviceorientation', function calibrationListener(event) {
+                if (event.gamma !== null && calibrationCount <= 50) {
+                    calibrationValues.push(event.gamma);
+                }
+                
+                if (calibrationCount > 50) {
+                    window.removeEventListener('deviceorientation', calibrationListener);
+                }
+            });
+        }
+
+        function startCountdown() {
+            startScreen.style.display = 'none';
+            countdownElement.style.display = 'block';
+            
+            let count = 3;
+            const countInterval = setInterval(() => {
+                countdownElement.textContent = count;
+                count--;
+                
+                if (count < 0) {
+                    clearInterval(countInterval);
+                    countdownElement.style.display = 'none';
+                    gameRunning = true;
+                    initGame();
+                    gameLoop();
+                    startGameTimer();
+                }
+            }, 1000);
+        }
+
+        function initGame() {
+            score = 0;
+            distance = 0;
+            lives = 3;
+            currentSpeed = 10;
+            targetSpeed = 10;
+            carPosition = 50;
+            currentCarPosition = 50;
+            targetCarPosition = 50;
+            obstacles = [];
+            rewards = [];
+            roadLines = [];
+            protectionTime = 0;
+            protectionType = '';
+            lastObstacleTime = 0;
+            lastRewardTime = 0;
+            
+            updateLives();
+            updateUI();
+            updateCarPosition();
+            createRoadLines();
+            
+            console.log('Oyun başlatıldı - Seviye:', currentGameLevel);
+        }
+
+        function startGameTimer() {
+            gameTimer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timeLeft').textContent = timeLeft;
+                
+                if (timeLeft <= 0) {
+                    endGame('Süre doldu!');
+                }
+                
+                // Koruma süresini azalt
+                if (protectionTime > 0) {
+                    protectionTime--;
+                    updateProtectionDisplay();
+                    
+                    if (protectionTime === 0) {
+                        removeProtection();
+                    }
+                }
+                
+            }, 1000);
+        }
+
+        function handleOrientation(event) {
+            const gamma = event.gamma;
+            const beta = event.beta;
+
+            if (gamma !== null && beta !== null) {
+                sensorWorking = true;
+                document.getElementById('sensorStatus').textContent = 'Aktif ✅';
+                
+                if (gameRunning) {
+                    controlCarWithSensorData(gamma, beta);
+                }
+            }
+        }
+
+        function handleMotion(event) {
+            if (sensorWorking) return;
+            
+            const acc = event.accelerationIncludingGravity;
+            if (acc && acc.x !== null) {
+                sensorWorking = true;
+                document.getElementById('sensorStatus').textContent = 'Motion ✅';
+            }
+        }
+
+        function controlCarWithSensorData(gamma, beta) {
+            let correctedGamma = gamma;
+            if (calibrationDone) {
+                correctedGamma = gamma - baseGamma;
+            }
+            
+            document.getElementById('correctedGamma').textContent = correctedGamma.toFixed(1);
+            
+            // Hareket kontrolü
+            if (Math.abs(correctedGamma) > 2) {
+                const maxMove = 15;
+                const moveRatio = Math.min(Math.abs(correctedGamma) / 30, 1);
+                const moveAmount = correctedGamma > 0 ? maxMove * moveRatio : -maxMove * moveRatio;
+                
+                targetCarPosition = 50 + moveAmount;
+                targetCarPosition = Math.max(25, Math.min(75, targetCarPosition));
+            } else {
+                targetCarPosition = 50;
+            }
+
+            // Yumuşak hareket
+            const positionDiff = targetCarPosition - currentCarPosition;
+            currentCarPosition += positionDiff * 0.1;
+            carPosition = currentCarPosition;
+            carPosition = Math.max(22, Math.min(78, carPosition));
+            updateCarPosition();
+
+            // Hız kontrolü
+            const settings = levelSettings[currentGameLevel];
+            let speedChange = 0;
+            
+            if (beta < 20) {
+                speedChange = (20 - beta) * 0.3;
+                targetSpeed = Math.min(settings.maxSpeed, currentSpeed + speedChange);
+            } else if (beta > 70) {
+                speedChange = (beta - 70) * 0.2;
+                targetSpeed = Math.max(5, currentSpeed - speedChange);
+            } else {
+                targetSpeed = Math.max(10, currentSpeed - 0.1);
+            }
+
+            const speedDiff = targetSpeed - currentSpeed;
+            currentSpeed += speedDiff * 0.05;
+            const speed = Math.round(currentSpeed);
+            gameSpeed = Math.max(0.2, speed / 100 * settings.speedMultiplier);
+            
+            document.getElementById('speedometer').textContent = speed;
+        }
+
+        function updateCarPosition() {
+            carPosition = Math.max(22, Math.min(78, carPosition));
+            car.style.left = carPosition + '%';
+            car.style.transform = `translateX(-50%)`;
+        }
+
+        function createRoadLines() {
+            const lineInterval = setInterval(() => {
+                if (!gameRunning) {
+                    clearInterval(lineInterval);
+                    return;
+                }
+                
+                const line = document.createElement('div');
+                line.className = 'road-line';
+                line.style.top = '-40px';
+                gameContainer.appendChild(line);
+
+                let position = -40;
+                const animate = () => {
+                    if (!gameRunning) return;
+                    position += gameSpeed * 4;
+                    line.style.top = position + 'px';
+                    
+                    if (position > window.innerHeight) {
+                        if (line.parentNode) line.parentNode.removeChild(line);
+                    } else {
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }, 300);
+        }
+
+        function createObstacle() {
+            const now = Date.now();
+            const settings = levelSettings[currentGameLevel];
+            
+            if (now - lastObstacleTime < settings.obstacleInterval) return;
+            
+            const obstacle = document.createElement('div');
+            obstacle.className = 'obstacle';
+            
+            const lanes = [30, 50, 70];
+            const selectedLane = lanes[Math.floor(Math.random() * lanes.length)];
+            obstacle.style.left = selectedLane + '%';
+            obstacle.style.top = '-80px';
+            obstacle.style.transform = 'translateX(-50%)';
+            
+            gameContainer.appendChild(obstacle);
+            obstacles.push(obstacle);
+            lastObstacleTime = now;
+
+            let position = -80;
+            const animate = () => {
+                if (!gameRunning) return;
+                position += gameSpeed * 3;
+                obstacle.style.top = position + 'px';
+                
+                if (position > window.innerHeight) {
+                    if (obstacle.parentNode) {
+                        obstacle.parentNode.removeChild(obstacle);
+                    }
+                    obstacles = obstacles.filter(obs => obs !== obstacle);
+                } else {
+                    requestAnimationFrame(animate);
+                }
+            };
+            animate();
+        }
+
+        function createReward() {
+            const now = Date.now();
+            if (now - lastRewardTime < 3000) return; // En az 3 saniye ara
+            
+            const reward = document.createElement('div');
+            const isYellow = Math.random() < 0.7; // %70 sarı, %30 yeşil
+            reward.className = `reward ${isYellow ? 'yellow' : 'green'}`;
+            reward.textContent = isYellow ? '⭐' : '💚';
+            reward.dataset.type = isYellow ? 'yellow' : 'green';
+            
+            const lanes = [30, 50, 70];
+            const selectedLane = lanes[Math.floor(Math.random() * lanes.length)];
+            reward.style.left = selectedLane + '%';
+            reward.style.top = '-40px';
+            reward.style.transform = 'translateX(-50%)';
+            
+            gameContainer.appendChild(reward);
+            rewards.push(reward);
+            lastRewardTime = now;
+
+            let position = -40;
+            const animate = () => {
+                if (!gameRunning) return;
+                position += gameSpeed * 2;
+                reward.style.top = position + 'px';
+                
+                if (position > window.innerHeight) {
+                    if (reward.parentNode) {
+                        reward.parentNode.removeChild(reward);
+                    }
+                    rewards = rewards.filter(r => r !== reward);
+                } else {
+                    requestAnimationFrame(animate);
+                }
+            };
+            animate();
+        }
+
+        function checkCollisions() {
+            const carRect = car.getBoundingClientRect();
+            
+            // Engel çarpışması
+            obstacles.forEach(obstacle => {
+                const obstacleRect = obstacle.getBoundingClientRect();
+                
+                if (carRect.left < obstacleRect.right &&
+                    carRect.right > obstacleRect.left &&
+                    carRect.top < obstacleRect.bottom &&
+                    carRect.bottom > obstacleRect.top) {
+                    
+                    if (protectionTime === 0) {
+                        lives--;
+                        updateLives();
+                        
+                        if (lives <= 0) {
+                            endGame('Canların bitti!');
+                        }
+                    }
+                    
+                    // Engeli kaldır
+                    if (obstacle.parentNode) {
+                        obstacle.parentNode.removeChild(obstacle);
+                    }
+                    obstacles = obstacles.filter(obs => obs !== obstacle);
+                }
+            });
+
+            // Ödül toplama
+            rewards.forEach(reward => {
+                const rewardRect = reward.getBoundingClientRect();
+                
+                if (carRect.left < rewardRect.right &&
+                    carRect.right > rewardRect.left &&
+                    carRect.top < rewardRect.bottom &&
+                    carRect.bottom > rewardRect.top) {
+                    
+                    collectReward(reward);
+                    
+                    if (reward.parentNode) {
+                        reward.parentNode.removeChild(reward);
+                    }
+                    rewards = rewards.filter(r => r !== reward);
+                }
+            });
+        }
+
+        function collectReward(reward) {
+            const type = reward.dataset.type;
+            
+            if (type === 'yellow') {
+                score += 50;
+                protectionTime = 3;
+                protectionType = 'yellow';
+                car.className = 'car-protected';
+                createParticles('yellow');
+            } else if (type === 'green') {
+                score += 100;
+                protectionTime = 5;
+                protectionType = 'green';
+                car.className = 'car-super-protected';
+                createParticles('green');
+            }
+            
+            updateProtectionDisplay();
+            updateUI();
+        }
+
+        function createParticles(color) {
+            for (let i = 0; i < 12; i++) {
+                setTimeout(() => {
+                    const particle = document.createElement('div');
+                    particle.className = `particle ${color}`;
+                    
+                    const carRect = car.getBoundingClientRect();
+                    const containerRect = gameContainer.getBoundingClientRect();
+                    
+                    particle.style.left = (carRect.left - containerRect.left + Math.random() * 40 - 20) + 'px';
+                    particle.style.top = (carRect.top - containerRect.top + Math.random() * 40 - 20) + 'px';
+                    
+                    gameContainer.appendChild(particle);
+                    
+                    // Partikül animasyonu
+                    let opacity = 1;
+                    let scale = 1;
+                    let x = Math.random() * 100 - 50;
+                    let y = Math.random() * 100 - 50;
+                    
+                    const animateParticle = () => {
+                        opacity -= 0.02;
+                        scale += 0.01;
+                        
+                        particle.style.opacity = opacity;
+                        particle.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+                        
+                        if (opacity > 0) {
+                            requestAnimationFrame(animateParticle);
+                        } else {
+                            if (particle.parentNode) {
+                                particle.parentNode.removeChild(particle);
+                            }
+                        }
+                    };
+                    animateParticle();
+                }, i * 50);
+            }
+        }
+
+        function updateProtectionDisplay() {
+            const protectionElement = document.getElementById('protection');
+            if (protectionTime > 0) {
+                protectionElement.textContent = `${protectionType === 'yellow' ? '⭐' : '💚'} Koruma: ${protectionTime}s`;
+            } else {
+                protectionElement.textContent = '';
+            }
+        }
+
+        function removeProtection() {
+            car.className = '';
+            protectionType = '';
+            updateProtectionDisplay();
+        }
+
+        function updateLives() {
+            const lifeElements = document.querySelectorAll('.life');
+            lifeElements.forEach((life, index) => {
+                if (index < lives) {
+                    life.classList.remove('lost');
+                } else {
+                    life.classList.add('lost');
+                }
+            });
+        }
+
+        function updateUI() {
+            document.getElementById('score').textContent = score;
+            distance += Math.round(gameSpeed * 2);
+            document.getElementById('distance').textContent = distance;
+        }
+
+        function gameLoop() {
+            if (!gameRunning) return;
+
+            checkCollisions();
+            updateUI();
+
+            const settings = levelSettings[currentGameLevel];
+            
+            // Engel yaratma
+            if (Math.random() < settings.obstacleChance) {
+                createObstacle();
+            }
+
+            // Ödül yaratma
+            if (Math.random() < settings.rewardChance) {
+                createReward();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function endGame(reason) {
+            gameRunning = false;
+            if (gameTimer) {
+                clearInterval(gameTimer);
+            }
+
+            document.getElementById('gameOverTitle').textContent = '🏁 Oyun Bitti!';
+            document.getElementById('gameOverReason').textContent = reason;
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalDistance').textContent = distance;
+            document.getElementById('finalLevel').textContent = levelSettings[currentGameLevel].name;
+            
+            gameOverScreen.style.display = 'block';
+            
+            // Engelleri ve ödülleri temizle
+            obstacles.forEach(obstacle => {
+                if (obstacle.parentNode) {
+                    obstacle.parentNode.removeChild(obstacle);
+                }
+            });
+            rewards.forEach(reward => {
+                if (reward.parentNode) {
+                    reward.parentNode.removeChild(reward);
+                }
+            });
+            obstacles = [];
+            rewards = [];
+        }
+
+        function restartGame() {
+            gameOverScreen.style.display = 'none';
+            
+            // Değişkenleri sıfırla
+            lives = 3;
+            score = 0;
+            distance = 0;
+            timeLeft = levelSettings[currentGameLevel].time;
+            protectionTime = 0;
+            protectionType = '';
+            targetCarPosition = 50;
+            currentCarPosition = 50;
+            targetSpeed = 10;
+            currentSpeed = 10;
+            carPosition = 50;
+            
+            removeProtection();
+            updateLives();
+            document.getElementById('timeLeft').textContent = timeLeft;
+            
+            startCountdown();
+        }
+
+        function backToMenu() {
+            gameOverScreen.style.display = 'none';
+            startScreen.style.display = 'flex';
+            
+            // Reset UI
+            document.getElementById('levelSelect').style.display = 'none';
+            document.querySelector('.instruction').style.display = 'block';
+            document.querySelector('button[onclick="showLevelSelect()"]').style.display = 'block';
+            document.getElementById('permissionStatus').innerHTML = '';
+        }
+
+        // Başlangıç konsol mesajı
+        console.log('🏎️ Pro Araba Yarışı yüklendi! Seviye seç ve sensörlerle oyna.');
+    </script>
+</body>
+</html>
